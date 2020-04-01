@@ -67,7 +67,7 @@ ui <- fluidPage(
                                               "Male Fawn" = 4,
                                               "Male Yearling" = 5,
                                               "Male Adult" = 6),
-                               selected = 1)
+                               selected = 1:6)
         ),
 
         # Show a plot of the generated distribution
