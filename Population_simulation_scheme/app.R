@@ -61,6 +61,16 @@ ui <- fluidPage(
                         min = 0.1,
                         max = 3,
                         value = 1),
+            sliderInput("K",
+                        "Carrying Capacity",
+                        min = 1400,
+                        max = 2000,
+                        value = 1600),
+            sliderInput("goal",
+                        "Population goal",
+                        min = 100,
+                        max = 500,
+                        value = 250),
             radioButtons("quota", "Fixed:",
                          choices = list("Proportion" = FALSE, "Quota" = TRUE),
                          selected = FALSE),
@@ -109,13 +119,15 @@ server <- function(input, output) {
         buck = input$weight_buck
         doe = input$weight_doe
         fawn = input$weight_fawn
+        K = input$K
+        goal = input$goal
         Harvest_weight_vector = c(fawn,doe,rep(doe,6),fawn,rep(buck,2))
 
         Harvest_matrix_at_this_level = matrix(Harvest_weight_vector,nrow = 11,ncol = 17)
 
-        Scheme_temp = analysisScheme(Chicago_RES$mcmc.objs,
+        Scheme_temp = analysisScheme_SimpleDD(Chicago_RES$mcmc.objs,
                                             Assumptions,c(8,3),
-                                            16,Harvest_matrix_at_this_level,quota = input$quota,skip = skip)
+                                            16,Harvest_matrix_at_this_level,quota = input$quota,skip = skip,K=K)
 
         sum_temp = lapply(Scheme_temp,function(w){
             temp = w
@@ -144,7 +156,8 @@ server <- function(input, output) {
             geom_point() +
             geom_errorbar(aes(ymin=CI_low, ymax=CI_high), width=.1) +
             ylab("Reconstructed Population") +
-            theme(text = element_text(size=18), axis.text.x = element_text(size = 16))
+            theme(text = element_text(size=18), axis.text.x = element_text(size = 16))+
+            geom_hline(yintercept=goal, linetype="dashed")
 
     })
 }
