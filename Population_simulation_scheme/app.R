@@ -11,6 +11,7 @@ library(coda)
 library(svMisc)
 library(RcppArmadillo)
 library(Rcpp)
+library(ggplot2)
 
 if (!file.exists("R-lib")) {
     dir.create("R-lib")
@@ -62,7 +63,7 @@ ui <- fluidPage(
                         max = 3,
                         value = 1),
             sliderInput("K",
-                        "Carrying Capacity",
+                        "Carrying capacity",
                         min = 1400,
                         max = 2000,
                         value = 1600),
@@ -87,7 +88,17 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("popdyn"),
+            navbarPage("Showing:",
+                       tabPanel("Population",
+                                    plotOutput("popdyn")
+                                ),
+                       tabPanel("Chance Reaching the Goal",
+                                        plotOutput("p_ctrl")
+                                    )
+     
+                ),
+                       
+           
            br(),
            br(),
            checkboxGroupInput("noskip",
@@ -111,9 +122,9 @@ server <- function(input, output) {
     load("4harv_8fec_6surv_equal.RData")
     rm(list = lsf.str())
 
+
     #load("4harv_3fec_6surv_equalvar.RData")
     output$popdyn <- renderPlot({
-        # generate bins based on input$bins from ui.R
         noskip = input$noskip
         skip = 1 - ((1:17) %in% noskip)
         buck = input$weight_buck
@@ -122,35 +133,37 @@ server <- function(input, output) {
         K = input$K
         goal = input$goal
         Harvest_weight_vector = c(fawn,doe,rep(doe,6),fawn,rep(buck,2))
-
+        
         Harvest_matrix_at_this_level = matrix(Harvest_weight_vector,nrow = 11,ncol = 17)
-
+        
         Scheme_temp = analysisScheme_SimpleDD(Chicago_RES$mcmc.objs,
-                                            Assumptions,c(8,3),
-                                            16,Harvest_matrix_at_this_level,quota = input$quota,skip = skip,K=K)
-
+                                              Assumptions,c(8,3),
+                                              16,Harvest_matrix_at_this_level,quota = input$quota,skip = skip,K=K)
+        
         sum_temp = lapply(Scheme_temp,function(w){
             temp = w
             temp[3,] = colSums(w[3:8,])
             temp = temp[-(4:8),]
         })
-
-
+        
+        sum_total = sum_temp
         sum_temp = lapply(sum_temp,function(w,sumover){
             colSums( matrix( w[ as.numeric( sumover),],ncol = 17))
-
+            
         },input$sumover)
+        sum_total = Reduce(rbind,sum_total)
         sum_temp = Reduce(rbind,sum_temp)
-
+        
         sum_temp_mean = colMeans(sum_temp,na.rm = T)
         CI_low = apply(sum_temp,2,quantile,0.025, na.rm = T)
         CI_high = apply(sum_temp,2,quantile,0.975, na.rm = T)
-
+        poster_prob_control = colMeans(sum_total<=goal)
         plot_data = data.frame(year = 1:17+1991,
                                pop_mean = sum_temp_mean,
+                               p_ctrl = poster_prob_control,
                                CI_low,
                                CI_high)
-        require(ggplot2)
+        # generate bins based on input$bins from ui.R
         ggplot(data = plot_data,aes(x = year,y=pop_mean))+
             geom_line() +
             geom_point() +
@@ -159,6 +172,41 @@ server <- function(input, output) {
             theme(text = element_text(size=18), axis.text.x = element_text(size = 16))+
             geom_hline(yintercept=goal, linetype="dashed")
 
+    })
+    output$p_ctrl <- renderPlot({
+        noskip = input$noskip
+        skip = 1 - ((1:17) %in% noskip)
+        buck = input$weight_buck
+        doe = input$weight_doe
+        fawn = input$weight_fawn
+        K = input$K
+        goal = input$goal
+        Harvest_weight_vector = c(fawn,doe,rep(doe,6),fawn,rep(buck,2))
+        
+        Harvest_matrix_at_this_level = matrix(Harvest_weight_vector,nrow = 11,ncol = 17)
+        
+        Scheme_temp = analysisScheme_SimpleDD(Chicago_RES$mcmc.objs,
+                                              Assumptions,c(8,3),
+                                              16,Harvest_matrix_at_this_level,quota = input$quota,skip = skip,K=K)
+        
+        sum_total = lapply(Scheme_temp,function(w){
+            temp = w
+            temp[3,] = colSums(w[3:8,])
+            temp = temp[-(4:8),]
+        })
+        
+        sum_total = lapply(sum_total,colSums)
+        sum_total = Reduce(rbind,sum_total)
+        
+        poster_prob_control = colMeans(sum_total<=goal,na.rm = T)
+        plot_data = data.frame(year = 1:17+1991,
+                               p_ctrl = poster_prob_control)
+        ggplot(data = plot_data,aes(x = year,y=p_ctrl))+
+            geom_line() +
+            geom_point() +
+            ylab("Posterior Probability Reaching the Goal")+
+            ylim(0,1)+
+            theme(text = element_text(size=18), axis.text.x = element_text(size = 16))
     })
 }
 
