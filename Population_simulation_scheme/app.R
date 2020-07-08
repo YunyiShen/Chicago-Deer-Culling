@@ -47,12 +47,17 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             sliderInput("weight_doe",
-                        "Weight on adult female",
+                        "Weight on adult+yearling female",
                         min = 0.1,
                         max = 3,
                         value = 1),
-            sliderInput("weight_other",
-                        "Weight on other classes",
+            sliderInput("weight_buck",
+                        "Weight on adult+yearling male",
+                        min = 0.1,
+                        max = 3,
+                        value = 1),
+            sliderInput("weight_fawn",
+                        "Weight on fawns",
                         min = 0.1,
                         max = 3,
                         value = 1),
@@ -72,26 +77,45 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("popdyn")
+           plotOutput("popdyn"),
+           br(),
+           br(),
+           checkboxGroupInput("noskip",
+                              ("Which year to cull?"),
+                              choices = c("1992" = 1,"1993" = 2,
+                                          "1994" = 3,"1995" = 4,
+                                          "1996" = 5,"1997" = 6,
+                                          "1998" = 7,"1999" = 8,
+                                          "2000" = 9,"2001" = 10,
+                                          "2002" = 11,"2003" = 12,
+                                          "2004" = 13,"2005" = 14,
+                                          "2006" = 15,"2007" = 16,
+                                          "2008" = 17),
+                              selected = 1:17,inline = TRUE)
         )
     )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-    load("4Harv_8Fec_11Surv_non_equal.RData")
+    load("4harv_8fec_6surv_equal.RData")
+    rm(list = lsf.str())
+
     #load("4harv_3fec_6surv_equalvar.RData")
     output$popdyn <- renderPlot({
         # generate bins based on input$bins from ui.R
-        others = input$weight_other
-        weight = input$weight_doe
-        Harvest_weight_vector = c(others,others,rep(weight,6),rep(others,3))
+        noskip = input$noskip
+        skip = 1 - ((1:17) %in% noskip)
+        buck = input$weight_buck
+        doe = input$weight_doe
+        fawn = input$weight_fawn
+        Harvest_weight_vector = c(fawn,doe,rep(doe,6),fawn,rep(buck,2))
 
         Harvest_matrix_at_this_level = matrix(Harvest_weight_vector,nrow = 11,ncol = 17)
 
         Scheme_temp = analysisScheme(Chicago_RES$mcmc.objs,
                                             Assumptions,c(8,3),
-                                            16,Harvest_matrix_at_this_level,quota = input$quota)
+                                            16,Harvest_matrix_at_this_level,quota = input$quota,skip = skip)
 
         sum_temp = lapply(Scheme_temp,function(w){
             temp = w

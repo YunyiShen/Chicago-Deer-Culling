@@ -1,0 +1,16 @@
+Package: ReCAP
+Type: Package
+Title: Reconstruct Culling and Aerial count of Population
+Version: 0.1.1
+Author: Y. Shen, D. Etter and T. Van Deelen
+Maintainer: Yunyi Shen <yshen99@wisc.edu>
+Description: Proto type of this package.
+License: GPL
+Encoding: UTF-8
+LazyData: true
+Imports: svMisc, ggplot2
+Depends: R (>= 3.5.0), RcppArmadillo, Rcpp (>= 0.11.0), coda
+LinkingTo: Rcpp, RcppArmadillo
+NeedsCompilation: yes
+Packaged: 2020-03-31 19:11:14 UTC; yunyi
+Built: R 3.6.3; x86_64-pc-linux-gnu; 2020-06-24 15:22:06 UTC; unix

@@ -5,6 +5,9 @@ account: yunyishen
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2030461
-bundleId: 2951738
+bundleId: 3339484
 url: https://yunyishen.shinyapps.io/chicago_scheme/
-when: 1585704370.61803
+when: 1593618210.19206
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: R-lib
