@@ -49,29 +49,34 @@ ui <- fluidPage(
         sidebarPanel(
             sliderInput("weight_doe",
                         "Weight on adult+yearling female",
-                        min = 0.1,
-                        max = 3,
-                        value = 1),
+                        min = 0.01,
+                        max = 1,
+                        value = 0.5),
             sliderInput("weight_buck",
                         "Weight on adult+yearling male",
-                        min = 0.1,
-                        max = 3,
-                        value = 1),
+                        min = 0.01,
+                        max = 1,
+                        value = .5),
             sliderInput("weight_fawn",
                         "Weight on fawns",
-                        min = 0.1,
-                        max = 3,
-                        value = 1),
+                        min = 0.01,
+                        max = 1,
+                        value = .5),
             sliderInput("K",
                         "Carrying capacity",
                         min = 1000,
-                        max = 1450,
+                        max = 1800,
                         value = 1200),
             sliderInput("goal",
                         "Population goal",
                         min = 100,
                         max = 500,
                         value = 250),
+            sliderInput("alpha",
+                        "CI level",
+                        min = 0.01,
+                        max = 0.99,
+                        value = 0.90),
             radioButtons("quota", "Fixed:",
                          choices = list("Proportion" = FALSE, "Quota" = TRUE),
                          selected = FALSE),
@@ -142,21 +147,26 @@ server <- function(input, output) {
         
         sum_temp = lapply(Scheme_temp,function(w){
             temp = w
-            temp[3,] = colSums(w[3:8,])
+            temp[is.na(temp)] = 0
+            temp[3,] = colSums(w[3:8,],na.rm = T)
             temp = temp[-(4:8),]
         })
         
         sum_total = sum_temp
         sum_temp = lapply(sum_temp,function(w,sumover){
-            colSums( matrix( w[ as.numeric( sumover),],ncol = 17))
+            colSums( matrix( w[ as.numeric( sumover),],ncol = 17),na.rm = T)
             
         },input$sumover)
         sum_total = Reduce(rbind,sum_total)
+        sum_total[is.na(sum_total)] = 0
         sum_temp = Reduce(rbind,sum_temp)
+        sum_temp[is.na(sum_temp)] = 0
         
-        sum_temp_mean = colMeans(sum_temp,na.rm = T)
-        CI_low = apply(sum_temp,2,quantile,0.025, na.rm = T)
-        CI_high = apply(sum_temp,2,quantile,0.975, na.rm = T)
+        lev <- (1-input$alpha)/2
+        
+        sum_temp_mean = apply(sum_temp,2,median,na.rm = T)
+        CI_low = apply(sum_temp,2,quantile,lev, na.rm = T)
+        CI_high = apply(sum_temp,2,quantile,1-lev, na.rm = T)
         poster_prob_control = colMeans(sum_total<=goal)
         plot_data = data.frame(year = 1:17+1991,
                                pop_mean = sum_temp_mean,
@@ -191,6 +201,7 @@ server <- function(input, output) {
         
         sum_total = lapply(Scheme_temp,function(w){
             temp = w
+            temp[is.na(temp)] = 0
             temp[3,] = colSums(w[3:8,])
             temp = temp[-(4:8),]
         })
