@@ -12,6 +12,7 @@ library(svMisc)
 library(RcppArmadillo)
 library(Rcpp)
 library(ggplot2)
+library(jsonlite)
 
 if (!file.exists("R-lib")) {
     dir.create("R-lib")
@@ -95,10 +96,12 @@ ui <- fluidPage(
         mainPanel(
             navbarPage("Showing:",
                        tabPanel("Population",
-                                    plotOutput("popdyn")
+                                    plotOutput("popdyn"),
+                                downloadButton("downloadpop", "Download raw numerical result")
                                 ),
                        tabPanel("Chance Reaching the Goal",
-                                        plotOutput("p_ctrl")
+                                        plotOutput("p_ctrl"),
+                                downloadButton("downloadp_ctr", "Download raw numerical result")
                                     )
      
                 ),
@@ -117,7 +120,8 @@ ui <- fluidPage(
                                           "2004" = 13,"2005" = 14,
                                           "2006" = 15,"2007" = 16,
                                           "2008" = 17),
-                              selected = 1:17,inline = TRUE)
+                              selected = 1:17,inline = TRUE),
+           downloadButton("downloadsetting", "Download raw settings in JSON")
         )
     )
 )
@@ -126,6 +130,12 @@ ui <- fluidPage(
 server <- function(input, output) {
     load("4harv_8fec_6surv_equal.RData")
     rm(list = lsf.str())
+    output$downloadsetting <- downloadHandler(
+        filename = "settings.json",
+        content = function(file) {
+            write_json(toJSON(reactiveValuesToList(input)), file)
+        }
+    )
 
 
     #load("4harv_3fec_6surv_equalvar.RData")
@@ -173,6 +183,19 @@ server <- function(input, output) {
                                p_ctrl = poster_prob_control,
                                CI_low,
                                CI_high)
+        output$downloadpop <- downloadHandler(
+            filename = "population_est.csv",
+            content = function(file) {
+                write.csv(plot_data, file, row.names = FALSE)
+            }
+        )
+        
+        output$downloadp_ctr <- downloadHandler(
+            filename = "population_est.csv",
+            content = function(file) {
+                write.csv(plot_data, file, row.names = FALSE)
+            }
+        )
         # generate bins based on input$bins from ui.R
         ggplot(data = plot_data,aes(x = year,y=pop_mean))+
             geom_line() +
