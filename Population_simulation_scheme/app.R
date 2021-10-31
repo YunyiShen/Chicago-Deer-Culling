@@ -79,7 +79,7 @@ ui <- fluidPage(
                         max = 0.99,
                         value = 0.90),
             radioButtons("quota", "Fixed:",
-                         choices = list("Proportion" = FALSE, "Quota" = TRUE),
+                         choices = list("Proportion" = FALSE),#, "Quota" = TRUE),
                          selected = FALSE),
             checkboxGroupInput("sumover",
                                ("Age classes to sum over?"),
@@ -177,7 +177,7 @@ server <- function(input, output) {
         sum_temp_mean = apply(sum_temp,2,median,na.rm = T)
         CI_low = apply(sum_temp,2,quantile,lev, na.rm = T)
         CI_high = apply(sum_temp,2,quantile,1-lev, na.rm = T)
-        poster_prob_control = colMeans(sum_total<=goal)
+        poster_prob_control = colMeans(sum_total<=goal,na.rm = T)
         plot_data = data.frame(year = 1:17+1991,
                                pop_mean = sum_temp_mean,
                                p_ctrl = poster_prob_control,
@@ -186,16 +186,10 @@ server <- function(input, output) {
         output$downloadpop <- downloadHandler(
             filename = "population_est.csv",
             content = function(file) {
-                write.csv(plot_data, file, row.names = FALSE)
+                write.csv(plot_data[,-3], file, row.names = FALSE)
             }
         )
         
-        output$downloadp_ctr <- downloadHandler(
-            filename = "population_est.csv",
-            content = function(file) {
-                write.csv(plot_data, file, row.names = FALSE)
-            }
-        )
         # generate bins based on input$bins from ui.R
         ggplot(data = plot_data,aes(x = year,y=pop_mean))+
             geom_line() +
@@ -235,6 +229,12 @@ server <- function(input, output) {
         poster_prob_control = colMeans(sum_total<=goal,na.rm = T)
         plot_data = data.frame(year = 1:17+1991,
                                p_ctrl = poster_prob_control)
+        output$downloadp_ctr <- downloadHandler(
+            filename = "prob_reaching_goal.csv",
+            content = function(file) {
+                write.csv(plot_data, file, row.names = FALSE)
+            }
+        )
         ggplot(data = plot_data,aes(x = year,y=p_ctrl))+
             geom_line() +
             geom_point() +
