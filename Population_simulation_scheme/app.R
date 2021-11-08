@@ -14,6 +14,8 @@ library(Rcpp)
 library(ggplot2)
 library(jsonlite)
 
+source("helper.R")
+
 if (!file.exists("R-lib")) {
     dir.create("R-lib")
 }
@@ -30,7 +32,7 @@ if (!file.exists("R-lib")) {
 
 # Install the package if needed.
 if (!do.call(require, list("ReCAP"))) {
-    install.packages("ReCAP_0.1.1.tar.gz", repos = NULL, type = "source")
+    install.packages("ReCAP_0.1.2.tar.gz", repos = NULL, type = "source")
 }
 
 # Instead of `library(myPackage)`, we'll use do.call, to evade deployapp's
@@ -102,7 +104,23 @@ ui <- fluidPage(
                        tabPanel("Chance Reaching the Goal",
                                         plotOutput("p_ctrl"),
                                 downloadButton("downloadp_ctr", "Download raw numerical result")
-                                    )
+                                ),
+                       tabPanel("More detailed numerical results",
+                                selectInput("result", "Choose a result:",
+                                            choices = c("harvest_median", 
+                                                        "harvest_lower_ci", 
+                                                        "harvest_upper_ci",
+                                                        "post_harvest_median",
+                                                        "post_harvest_lower_ci",
+                                                        "post_harvest_upper_ci",
+                                                        "non_harvest_change_median",
+                                                        "non_harvest_change_lower_ci",
+                                                        "non_harvest_change_upper_ci")),
+                                
+                                # Button
+                                downloadButton("downloadres", "Download"),
+                                tableOutput("table")
+                                )
      
                 ),
                        
@@ -241,6 +259,48 @@ server <- function(input, output) {
             ylab("Posterior Probability Reaching the Goal")+
             ylim(0,1)+
             theme(text = element_text(size=18), axis.text.x = element_text(size = 16))
+    })
+    output$table <- renderTable({
+        lev <- (1-input$alpha)/2
+        what_we_want <- #reactive({
+            switch(input$result,
+                   "harvest_median" = list("Harvest",0.5), 
+                   "harvest_lower_ci" = list("Harvest",lev), 
+                   "harvest_upper_ci" = list("Harvest",1-lev),
+                   "post_harvest_median" = list("Living",0.5),
+                   "post_harvest_lower_ci" = list("Living", lev),
+                   "post_harvest_upper_ci" = list("Living", 1-lev),
+                   "non_harvest_change_median" = list("non_havest_change", .5),
+                   "non_harvest_change_lower_ci" = list("non_havest_change", lev),
+                   "non_harvest_change_upper_ci" = list("non_havest_change", 1-lev))
+        #})
+        
+        ## run the simulation
+        noskip = input$noskip
+        skip = 1 - ((1:17) %in% noskip)
+        buck = input$weight_buck
+        doe = input$weight_doe
+        fawn = input$weight_fawn
+        K = input$K
+        goal = input$goal
+        Harvest_weight_vector = c(fawn,doe,rep(doe,6),fawn,rep(buck,2))
+        
+        Harvest_matrix_at_this_level = matrix(Harvest_weight_vector,nrow = 11,ncol = 17)
+        Scheme_temp = analysisportion_simpleDDScheme_full(Chicago_RES$mcmc.objs,
+                                              Assumptions,c(8,3),
+                                              16,Harvest_matrix_at_this_level,skip = skip,K=K)
+        the_table = extract_things_we_want(Scheme_temp, what_we_want)
+        output$downloadres <- downloadHandler(
+            filename = function() {
+                paste(input$result, ".csv", sep = "")
+            },
+            content = function(file) {
+                write.csv(the_table, file, row.names = TRUE)
+            }
+        )
+        
+        the_table
+        
     })
 }
 
