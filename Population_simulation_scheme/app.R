@@ -146,7 +146,7 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-    load("4harv_8fec_6surv_equal.RData")
+    load("6harv_4surv_3fec_equal.RData")
     rm(list = lsf.str())
     output$downloadsetting <- downloadHandler(
         filename = "settings.json",
